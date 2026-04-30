@@ -1,0 +1,86 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException, UploadFile
+from uuid import UUID
+from sqlalchemy.exc import IntegrityError
+
+from app.schemas.commodities import CommodityCreate, CommodityUpdate, BulkInsertResponse
+from app.repositories import commodities as commodity_repo
+from app.utils.excel_parser import parse_commodities_excel
+
+async def list_commodities(db: AsyncSession, skip: int = 0, limit: int = 20, search: str | None = None):
+    return await commodity_repo.get_commodities(db, skip=skip, limit=limit, search=search)
+
+async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, current_user: dict):
+    farmer_id = current_user.get("uid")
+    if not farmer_id:
+        raise HTTPException(status_code=401, detail="User not authenticated properly")
+        
+    try:
+        return await commodity_repo.create_commodity(db, commodity, farmer_id)
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"Database integrity error: {str(e.orig)}")
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update: CommodityUpdate, current_user: dict):
+    farmer_id = current_user.get("uid")
+    
+    db_commodity = await commodity_repo.get_commodity_by_id(db, commodity_id)
+    if not db_commodity:
+        raise HTTPException(status_code=404, detail="Commodity not found")
+        
+    if db_commodity.farmer_id != farmer_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this commodity")
+        
+    try:
+        return await commodity_repo.update_commodity(db, db_commodity, commodity_update)
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"Database integrity error: {str(e.orig)}")
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def bulk_insert_excel(db: AsyncSession, file: UploadFile, current_user: dict) -> BulkInsertResponse:
+    farmer_id = current_user.get("uid")
+    if not farmer_id:
+        raise HTTPException(status_code=401, detail="User not authenticated properly")
+        
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported")
+        
+    content = await file.read()
+    
+    try:
+        valid_data, errors = parse_commodities_excel(content, farmer_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        await file.close()
+        
+    if errors:
+        return BulkInsertResponse(
+            success=False,
+            inserted_count=0,
+            errors=errors
+        )
+        
+    if not valid_data:
+        raise HTTPException(status_code=400, detail="Excel file is empty or contains no valid data")
+        
+    try:
+        inserted_count = await commodity_repo.bulk_create_commodities(db, valid_data)
+        await db.commit()
+        return BulkInsertResponse(
+            success=True,
+            inserted_count=inserted_count,
+            errors=[]
+        )
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"Database error during bulk insert: {str(e.orig)}")
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
