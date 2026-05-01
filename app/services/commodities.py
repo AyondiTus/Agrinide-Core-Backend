@@ -6,14 +6,13 @@ from sqlalchemy.exc import IntegrityError
 from app.schemas.commodities import CommodityCreate, CommodityUpdate, BulkInsertResponse
 from app.repositories import commodities as commodity_repo
 from app.utils.excel_parser import parse_commodities_excel
+from app.models.users import User
 
 async def list_commodities(db: AsyncSession, skip: int = 0, limit: int = 20, search: str | None = None):
     return await commodity_repo.get_commodities(db, skip=skip, limit=limit, search=search)
 
-async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, current_user: dict):
-    farmer_id = current_user.get("uid")
-    if not farmer_id:
-        raise HTTPException(status_code=401, detail="User not authenticated properly")
+async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, current_user: User):
+    farmer_id = current_user.id
         
     try:
         return await commodity_repo.create_commodity(db, commodity, farmer_id)
@@ -24,8 +23,8 @@ async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, current
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update: CommodityUpdate, current_user: dict):
-    farmer_id = current_user.get("uid")
+async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update: CommodityUpdate, current_user: User):
+    farmer_id = current_user.id
     
     db_commodity = await commodity_repo.get_commodity_by_id(db, commodity_id)
     if not db_commodity:
@@ -43,10 +42,8 @@ async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update:
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-async def bulk_insert_excel(db: AsyncSession, file: UploadFile, current_user: dict) -> BulkInsertResponse:
-    farmer_id = current_user.get("uid")
-    if not farmer_id:
-        raise HTTPException(status_code=401, detail="User not authenticated properly")
+async def bulk_insert_excel(db: AsyncSession, file: UploadFile, current_user: User) -> BulkInsertResponse:
+    farmer_id = current_user.id
         
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported")
