@@ -1,8 +1,12 @@
 import firebase_admin
 from firebase_admin import credentials, auth
-from fastapi import HTTPException, Security, status
+from fastapi import HTTPException, Security, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
+from app.database import get_db
+from app.repositories import users as user_repo
+from app.models.users import User
 
 # Initialize Firebase Admin App
 def init_firebase():
@@ -68,3 +72,32 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             detail=f"Could not validate credentials: {str(e)}",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+async def get_current_active_user(
+    db: AsyncSession = Depends(get_db),
+    decoded_token: dict = Depends(get_current_user)
+) -> User:
+    """
+    Fetch the user from the database using the Firebase UID from the decoded token.
+    """
+    uid = decoded_token.get("uid")
+    user = await user_repo.get_user_by_id(db, uid)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found in database. Please register first."
+        )
+    return user
+
+def RoleChecker(allowed_roles: list[str]):
+    """
+    Dependency factory to check if the current user has one of the allowed roles.
+    """
+    async def role_checker(current_user: User = Depends(get_current_active_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{current_user.role}' is not authorized to access this resource. Required roles: {allowed_roles}"
+            )
+        return current_user
+    return role_checker
