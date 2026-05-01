@@ -16,6 +16,7 @@ class CommodityBase(BaseModel):
     price_per_kg: float = Field(..., gt=0, description="Harga harus lebih besar dari 0")
     current_stock: float = Field(..., ge=0, description="Stok tidak boleh negatif")
     location: Optional[str] = None
+    path_image: Optional[str] = None
     is_active: bool = True
 
 class CommodityCreate(CommodityBase):
@@ -26,6 +27,7 @@ class CommodityUpdate(BaseModel):
     price_per_kg: Optional[float] = Field(None, gt=0)
     current_stock: Optional[float] = Field(None, ge=0)
     location: Optional[str] = None
+    path_image: Optional[str] = None
     is_active: Optional[bool] = None
 
 class CommodityResponse(CommodityBase):

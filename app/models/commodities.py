@@ -13,6 +13,7 @@ class Commodity(Base):
     price_per_kg = Column(Numeric(12, 2), nullable=False)
     current_stock = Column(Numeric(10, 2), nullable=False)
     location = Column(String(255))
+    path_image = Column(String(255), nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     is_active = Column(Boolean, default=True)
     

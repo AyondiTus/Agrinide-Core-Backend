@@ -1,3 +1,4 @@
+import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, UploadFile
 from uuid import UUID
@@ -8,14 +9,35 @@ from app.repositories import commodities as commodity_repo
 from app.utils.excel_parser import parse_commodities_excel
 from app.models.users import User
 
+UPLOAD_DIR = "app/public/image"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+async def _save_image(file: UploadFile, commodity_id: UUID) -> str:
+    file_extension = os.path.splitext(file.filename)[1]
+    filename = f"{commodity_id}{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+        
+    return f"/{file_path}".replace("\\", "/")  # Normalize path for web
+
 async def list_commodities(db: AsyncSession, skip: int = 0, limit: int = 20, search: str | None = None):
     return await commodity_repo.get_commodities(db, skip=skip, limit=limit, search=search)
 
-async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, current_user: User):
+async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, image: UploadFile | None, current_user: User):
     farmer_id = current_user.id
         
     try:
-        return await commodity_repo.create_commodity(db, commodity, farmer_id)
+        db_commodity = await commodity_repo.create_commodity(db, commodity, farmer_id)
+        
+        if image:
+            path_image = await _save_image(image, db_commodity.id)
+            # Update the commodity with the new path
+            db_commodity = await commodity_repo.update_commodity(db, db_commodity, CommodityUpdate(path_image=path_image))
+            
+        return db_commodity
     except IntegrityError as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=f"Database integrity error: {str(e.orig)}")
@@ -23,7 +45,7 @@ async def insert_commodity(db: AsyncSession, commodity: CommodityCreate, current
         await db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update: CommodityUpdate, current_user: User):
+async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update: CommodityUpdate, image: UploadFile | None, current_user: User):
     farmer_id = current_user.id
     
     db_commodity = await commodity_repo.get_commodity_by_id(db, commodity_id)
@@ -32,6 +54,10 @@ async def update_catalog(db: AsyncSession, commodity_id: UUID, commodity_update:
         
     if db_commodity.farmer_id != farmer_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this commodity")
+        
+    if image:
+        path_image = await _save_image(image, commodity_id)
+        commodity_update.path_image = path_image
         
     try:
         return await commodity_repo.update_commodity(db, db_commodity, commodity_update)

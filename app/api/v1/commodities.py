@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Query, status
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
@@ -23,20 +23,44 @@ async def get_all_commodities(
 
 @router.post("/", response_model=CommodityResponse, status_code=status.HTTP_201_CREATED)
 async def create_commodity(
-    commodity: CommodityCreate,
+    name: str = Form(...),
+    price_per_kg: float = Form(...),
+    current_stock: float = Form(...),
+    location: str | None = Form(None),
+    is_active: bool = Form(True),
+    image: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(RoleChecker(["farmer"]))
 ):
-    return await commodity_service.insert_commodity(db, commodity, current_user)
+    commodity = CommodityCreate(
+        name=name,
+        price_per_kg=price_per_kg,
+        current_stock=current_stock,
+        location=location,
+        is_active=is_active
+    )
+    return await commodity_service.insert_commodity(db, commodity, image, current_user)
 
 @router.put("/{commodity_id}", response_model=CommodityResponse)
 async def update_commodity(
     commodity_id: UUID,
-    commodity_update: CommodityUpdate,
+    name: str | None = Form(None),
+    price_per_kg: float | None = Form(None),
+    current_stock: float | None = Form(None),
+    location: str | None = Form(None),
+    is_active: bool | None = Form(None),
+    image: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(RoleChecker(["farmer"]))
 ):
-    return await commodity_service.update_catalog(db, commodity_id, commodity_update, current_user)
+    commodity_update = CommodityUpdate(
+        name=name,
+        price_per_kg=price_per_kg,
+        current_stock=current_stock,
+        location=location,
+        is_active=is_active
+    )
+    return await commodity_service.update_catalog(db, commodity_id, commodity_update, image, current_user)
 
 @router.post("/bulk", response_model=BulkInsertResponse, status_code=status.HTTP_201_CREATED)
 async def bulk_create_commodities(
