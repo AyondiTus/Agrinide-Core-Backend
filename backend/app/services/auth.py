@@ -37,8 +37,9 @@ async def create_new_user(
         name=name,
         role=role,
         phone=user_data.phone,
-        address_city=user_data.address_city,
-        address_province=user_data.address_province,
+        id_provinsi=user_data.id_provinsi,
+        id_kota=user_data.id_kota,
+        id_kecamatan=user_data.id_kecamatan,
         address_detail=user_data.address_detail
     )
 

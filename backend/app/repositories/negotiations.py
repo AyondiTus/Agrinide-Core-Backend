@@ -20,7 +20,6 @@ async def get_negotiation_by_id(db: AsyncSession, negotiation_id: UUID) -> Negot
             selectinload(Negotiation.farmer),
             selectinload(Negotiation.buyer),
             selectinload(Negotiation.commodity),
-            selectinload(Negotiation.template),
             selectinload(Negotiation.histories),
         )
         .where(Negotiation.id == negotiation_id)
@@ -40,7 +39,6 @@ async def get_negotiations_by_user(
             selectinload(Negotiation.farmer),
             selectinload(Negotiation.buyer),
             selectinload(Negotiation.commodity),
-            selectinload(Negotiation.template),
         )
         .where(
             or_(

@@ -5,8 +5,9 @@ from datetime import datetime
 class UserCreate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
-    address_city: Optional[str] = None
-    address_province: Optional[str] = None
+    id_provinsi: Optional[int] = None
+    id_kota: Optional[int] = None
+    id_kecamatan: Optional[int] = None
     address_detail: Optional[str] = None
 
 class UserResponse(BaseModel):
@@ -15,8 +16,9 @@ class UserResponse(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     role: str
-    address_city: Optional[str] = None
-    address_province: Optional[str] = None
+    id_provinsi: Optional[int] = None
+    id_kota: Optional[int] = None
+    id_kecamatan: Optional[int] = None
     address_detail: Optional[str] = None
     created_at: datetime
 

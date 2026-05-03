@@ -39,17 +39,16 @@ async def start_negotiation(db: AsyncSession, current_user: dict, payload: Negot
         raise HTTPException(status_code=400, detail="You cannot start a negotiation on your own commodity")
     
     data = {
-        "template_id": payload.template_id,
         "farmer_id": commodity.farmer_id,
         "buyer_id": uid,
         "commodity_id": payload.commodity_id,
         "current_price": payload.price,
         "current_volume": payload.volume,
-        "quality_grade": payload.quality_grade,
-        "payment_method": payload.payment_method,
-        "payment_term": payload.payment_term,
-        "shipping_point": payload.shipping_point,
-        "delivery_type": payload.delivery_type,
+        "quality_grade_id": payload.quality_grade_id,
+        "payment_method_id": payload.payment_method_id,
+        "payment_term_id": payload.payment_term_id,
+        "shipping_point_id": payload.shipping_point_id,
+        "delivery_type_id": payload.delivery_type_id,
         "proposed_by": uid,
         "status": "negotiating",
     }
@@ -78,11 +77,11 @@ async def counter_offer(db: AsyncSession, current_user: dict, negotiation_id: UU
         "negotiation_id": negotiation.id,
         "price": negotiation.current_price,
         "volume": negotiation.current_volume,
-        "quality_grade": negotiation.quality_grade,
-        "payment_method": negotiation.payment_method,
-        "payment_term": negotiation.payment_term,
-        "shipping_point": negotiation.shipping_point,
-        "delivery_type": negotiation.delivery_type,
+        "quality_grade_id": negotiation.quality_grade_id,
+        "payment_method_id": negotiation.payment_method_id,
+        "payment_term_id": negotiation.payment_term_id,
+        "shipping_point_id": negotiation.shipping_point_id,
+        "delivery_type_id": negotiation.delivery_type_id,
         "proposed_by": negotiation.proposed_by,
     }
     await nego_repo.create_history_entry(db, history_data)

@@ -35,6 +35,7 @@ class Contract(Base):
     buyer = relationship("User", foreign_keys=[buyer_id], back_populates="contracts_as_buyer")
     commodity = relationship("Commodity", back_populates="contracts")
     fulfillments = relationship("Fulfillment", back_populates="contract")
+    payments = relationship("Payment", back_populates="contract")
 
 
 class Fulfillment(Base):

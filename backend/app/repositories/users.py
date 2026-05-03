@@ -13,8 +13,9 @@ async def create_user(
     name: str, 
     role: str,
     phone: str | None = None,
-    address_city: str | None = None,
-    address_province: str | None = None,
+    id_provinsi: int | None = None,
+    id_kota: int | None = None,
+    id_kecamatan: int | None = None,
     address_detail: str | None = None
 ) -> User:
     db_user = User(
@@ -23,8 +24,9 @@ async def create_user(
         name=name,
         role=role,
         phone=phone,
-        address_city=address_city,
-        address_province=address_province,
+        id_provinsi=id_provinsi,
+        id_kota=id_kota,
+        id_kecamatan=id_kecamatan,
         address_detail=address_detail
     )
     db.add(db_user)

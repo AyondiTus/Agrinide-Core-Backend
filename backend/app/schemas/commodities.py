@@ -6,8 +6,9 @@ from uuid import UUID
 class FarmerInfo(BaseModel):
     id: str
     name: str
-    address_city: Optional[str] = None
-    address_province: Optional[str] = None
+    id_provinsi: Optional[int] = None
+    id_kota: Optional[int] = None
+    id_kecamatan: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
