@@ -14,5 +14,4 @@ class ContractTemplate(Base):
     required_fields = Column(JSONB, comment="Definisi input form dinamis di frontend")
 
     # Relationships
-    negotiations = relationship("Negotiation", back_populates="template")
     contracts = relationship("Contract", back_populates="template")

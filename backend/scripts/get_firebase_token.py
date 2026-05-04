@@ -1,9 +1,9 @@
 """
-Script untuk mendapatkan Firebase ID Token untuk testing.
+Script untuk mendapatkan Firebase ID Token untuk testing (Pembeli & Petani).
 Menggunakan Firebase Admin SDK Custom Token (tanpa password).
 
 Jalankan dari root project:
-    python tests/get_firebase_token.py
+    python scripts/get_firebase_token.py
 """
 import requests
 import sys
@@ -51,11 +51,26 @@ def get_id_token_via_custom_token(uid):
     data = response.json()
     
     if response.status_code == 200:
-        return data.get("idToken")
+        return data.get("idToken"), uid
     else:
         error_msg = data.get("error", {}).get("message", "Unknown error")
         print(f"  [FAIL] Token exchange gagal: {error_msg}")
-        return None
+        return None, None
+
+def print_token_info(role, email, uid, token):
+    if token:
+        print(f"\n{'='*60}")
+        print(f"  TOKEN BERHASIL DIDAPATKAN - {role.upper()}")
+        print(f"{'='*60}")
+        print(f"  Role  : {role}")
+        print(f"  UID   : {uid}")
+        print(f"  Email : {email}")
+        print(f"\n  ID Token (copy ke Bruno/Postman):")
+        print(f"  {'-'*55}")
+        print(f"  {token}")
+        print(f"  {'-'*55}")
+        print(f"\n  Token berlaku selama 1 jam.")
+        print(f"{'='*60}\n")
 
 def main():
     if not FIREBASE_API_KEY:
@@ -63,29 +78,28 @@ def main():
         return
     
     print(f"{'='*60}")
-    print(f"  FIREBASE TOKEN GENERATOR")
+    print(f"  FIREBASE TOKEN GENERATOR (PEMBELI & PETANI)")
     print(f"{'='*60}")
     
-    email = os.getenv("FIREBASE_EMAIL", "test@example.com")
+    # Ambil credential dari .env
+    email_pembeli = os.getenv("FIREBASE_EMAIL_PEMBELI", "buyer@example.com")
+    email_petani = os.getenv("FIREBASE_EMAIL_PETANI", "farmer@example.com")
     
-    print(f"\n[1/2] Memastikan user ada di Firebase...")
-    user = create_or_get_user(email)
+    # PROSES PEMBELI
+    print(f"\n[1/4] Memastikan user Pembeli ada di Firebase...")
+    user_pembeli = create_or_get_user(email_pembeli, "Pembeli Test")
     
-    print(f"\n[2/2] Generating ID Token via Custom Token...")
-    token = get_id_token_via_custom_token(user.uid)
+    print(f"\n[2/4] Generating ID Token Pembeli via Custom Token...")
+    token_pembeli, _ = get_id_token_via_custom_token(user_pembeli.uid)
+    print_token_info("Pembeli", email_pembeli, user_pembeli.uid, token_pembeli)
     
-    if token:
-        print(f"\n{'='*60}")
-        print(f"  TOKEN BERHASIL DIDAPATKAN!")
-        print(f"{'='*60}")
-        print(f"\n  UID   : {user.uid}")
-        print(f"  Email : {email}")
-        print(f"\n  ID Token (copy ke Bruno/Postman):")
-        print(f"  {'-'*55}")
-        print(f"  {token}")
-        print(f"  {'-'*55}")
-        print(f"\n  Token berlaku selama 1 jam.")
-        print(f"{'='*60}")
+    # PROSES PETANI
+    print(f"\n[3/4] Memastikan user Petani ada di Firebase...")
+    user_petani = create_or_get_user(email_petani, "Petani Test")
+    
+    print(f"\n[4/4] Generating ID Token Petani via Custom Token...")
+    token_petani, _ = get_id_token_via_custom_token(user_petani.uid)
+    print_token_info("Petani", email_petani, user_petani.uid, token_petani)
 
 if __name__ == "__main__":
     main()

@@ -50,7 +50,7 @@ async def create_commodity(db: AsyncSession, commodity: CommodityCreate, farmer_
     return await get_commodity_by_id(db, db_commodity.id)
 
 async def update_commodity(db: AsyncSession, db_commodity: Commodity, commodity_update: CommodityUpdate):
-    update_data = commodity_update.model_dump(exclude_unset=True)
+    update_data = commodity_update.model_dump(exclude_unset=True, exclude_none=True)
     for key, value in update_data.items():
         setattr(db_commodity, key, value)
         
