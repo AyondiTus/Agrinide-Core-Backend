@@ -79,3 +79,12 @@ class NegotiationResponse(BaseModel):
 
 class NegotiationDetailResponse(NegotiationResponse):
     histories: List[NegotiationHistoryResponse] = []
+
+class NegotiationChatResponse(BaseModel):
+    id: UUID
+    negotiation_id: UUID
+    sender_id: str
+    message: str
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)

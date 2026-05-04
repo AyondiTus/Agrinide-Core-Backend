@@ -73,6 +73,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+async def get_websocket_user(token: str):
+    """
+    Validate the Firebase JWT token from a WebSocket query parameter.
+    """
+    from fastapi import WebSocketException
+    try:
+        decoded_token = auth.verify_id_token(token)
+        return decoded_token
+    except Exception as e:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=f"Could not validate credentials: {str(e)}")
+
 async def get_current_active_user(
     db: AsyncSession = Depends(get_db),
     decoded_token: dict = Depends(get_current_user)

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Numeric, DateTime, Integer, ForeignKey, func
+from sqlalchemy import Column, String, Numeric, DateTime, Integer, ForeignKey, func, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
@@ -66,3 +66,17 @@ class NegotiationHistory(Base):
     payment_term = relationship("PaymentTerm", foreign_keys=[payment_term_id])
     shipping_point = relationship("ShippingPoint", foreign_keys=[shipping_point_id])
     delivery_type = relationship("DeliveryType", foreign_keys=[delivery_type_id])
+
+
+class NegotiationChat(Base):
+    __tablename__ = "negotiation_chats"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    negotiation_id = Column(UUID(as_uuid=True), ForeignKey("negotiations.id", ondelete="CASCADE"), nullable=False)
+    sender_id = Column(String(128), ForeignKey("users.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    negotiation = relationship("Negotiation")
+    sender = relationship("User")

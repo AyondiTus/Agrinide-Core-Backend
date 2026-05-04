@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
@@ -9,9 +9,12 @@ from app.schemas.negotiations import (
     NegotiationStart,
     NegotiationCounter,
     NegotiationResponse,
-    NegotiationDetailResponse
+    NegotiationDetailResponse,
+    NegotiationChatResponse
 )
 from app.services import negotiations as nego_service
+from app.repositories import negotiations as nego_repo
+from app.core.security import get_websocket_user
 
 router = APIRouter()
 
@@ -64,3 +67,22 @@ async def get_negotiation_detail(
     current_user: dict = Depends(get_current_user)
 ):
     return await nego_service.get_negotiation_detail(db, current_user, negotiation_id)
+
+@router.get("/{negotiation_id}/chats", response_model=List[NegotiationChatResponse])
+async def get_negotiation_chats(
+    negotiation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    negotiation = await nego_service.get_negotiation_detail(db, current_user, negotiation_id)
+    return await nego_repo.get_negotiation_chats(db, negotiation_id)
+
+@router.websocket("/ws/{negotiation_id}")
+async def websocket_negotiation_chat(
+    websocket: WebSocket,
+    negotiation_id: UUID,
+    token: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user = await get_websocket_user(token)
+    await nego_service.handle_websocket_chat(websocket, negotiation_id, current_user, db)

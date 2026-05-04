@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, WebSocket, WebSocketDisconnect
 from uuid import UUID
 
 from app.schemas.negotiations import NegotiationStart, NegotiationCounter
@@ -145,3 +145,39 @@ async def get_negotiation_detail(db: AsyncSession, current_user: dict, negotiati
 async def list_user_negotiations(db: AsyncSession, current_user: dict, skip: int = 0, limit: int = 20):
     uid = _get_uid(current_user)
     return await nego_repo.get_negotiations_by_user(db, uid, skip=skip, limit=limit)
+
+async def handle_websocket_chat(websocket: WebSocket, negotiation_id: UUID, current_user: dict, db: AsyncSession):
+    uid = _get_uid(current_user)
+
+    negotiation = await nego_repo.get_negotiation_by_id(db, negotiation_id)
+    if not negotiation or uid not in (negotiation.farmer_id, negotiation.buyer_id):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    room_id = str(negotiation_id)
+    from app.utils.websocket_manager import manager
+    await manager.connect(websocket, room_id)
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            
+            chat_data = {
+                "negotiation_id": negotiation_id,
+                "sender_id": uid,
+                "message": data
+            }
+            chat = await nego_repo.create_chat_message(db, chat_data)
+
+            response = {
+                "id": str(chat.id),
+                "negotiation_id": str(chat.negotiation_id),
+                "sender_id": chat.sender_id,
+                "message": chat.message,
+                "created_at": chat.created_at.isoformat() if chat.created_at else None
+            }
+            
+            await manager.broadcast_to_room(room_id, response)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, room_id)

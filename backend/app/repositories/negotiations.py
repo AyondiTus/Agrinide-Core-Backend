@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
 from uuid import UUID
 
-from app.models.negotiations import Negotiation, NegotiationHistory
+from app.models.negotiations import Negotiation, NegotiationHistory, NegotiationChat
 
 async def create_negotiation(db: AsyncSession, data: dict) -> Negotiation:
     negotiation = Negotiation(**data)
@@ -71,6 +71,22 @@ async def get_negotiation_histories(db: AsyncSession, negotiation_id: UUID):
         select(NegotiationHistory)
         .where(NegotiationHistory.negotiation_id == negotiation_id)
         .order_by(NegotiationHistory.created_at.asc())
+    )
+    result = await db.execute(query)
+    return result.scalars().all()
+
+async def create_chat_message(db: AsyncSession, data: dict):
+    chat = NegotiationChat(**data)
+    db.add(chat)
+    await db.commit()
+    await db.refresh(chat)
+    return chat
+
+async def get_negotiation_chats(db: AsyncSession, negotiation_id: UUID):
+    query = (
+        select(NegotiationChat)
+        .where(NegotiationChat.negotiation_id == negotiation_id)
+        .order_by(NegotiationChat.created_at.asc())
     )
     result = await db.execute(query)
     return result.scalars().all()
